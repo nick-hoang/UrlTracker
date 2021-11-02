@@ -253,5 +253,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Models
 		public DateTime Inserted { get; set; }
 
 		public bool ForceRedirect { get; set; }
+
+		public int Priority { get; set; }
 	}
 }

@@ -47,7 +47,7 @@ namespace InfoCaster.Umbraco.UrlTracker
 		public void Initialize()
 		{
 			MigrationPlan val = new MigrationPlan("UrlTracker");
-			val.From(string.Empty).To<AddUrlTrackerTables>("urlTracker");
+			val.From(string.Empty).To<AddUrlTrackerTablesMigration>("urlTracker");			
 			new Upgrader(val).Execute(_scopeProvider, _migrationBuilder, _keyValueService, _logger);
 			if (!_urlTrackerSettings.IsDisabled() && !_urlTrackerSettings.IsTrackingDisabled())
 			{

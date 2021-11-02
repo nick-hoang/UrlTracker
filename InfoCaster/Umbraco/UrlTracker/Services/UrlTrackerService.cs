@@ -276,7 +276,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 			return _urlTrackerRepository.GetEntryById(id);
 		}
 
-		public UrlTrackerGetResult GetRedirects(int skip, int amount, UrlTrackerSortType sortType = UrlTrackerSortType.CreatedDesc, string searchQuery = "")
+		public UrlTrackerGetResult GetRedirects(int skip, int amount, UrlTrackerSortType sortType = UrlTrackerSortType.Default, string searchQuery = "")
 		{
 			return _urlTrackerRepository.GetRedirects(skip, amount, sortType, searchQuery);
 		}
@@ -291,7 +291,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 			List<UrlTrackerModel> list = _urlTrackerCacheService.Get<List<UrlTrackerModel>>(_forcedRedirectsCacheKey);
 			if (list == null)
 			{
-				List<UrlTrackerModel> records = _urlTrackerRepository.GetRedirects(null, null, UrlTrackerSortType.CreatedDesc, "", onlyForcedRedirects: true).Records;
+				List<UrlTrackerModel> records = _urlTrackerRepository.GetRedirects(null, null, UrlTrackerSortType.Default, "", onlyForcedRedirects: true).Records;
 				_urlTrackerCacheService.Set(_forcedRedirectsCacheKey, records, _urlTrackerSettings.IsForcedRedirectCacheTimeoutEnabled() ? new TimeSpan?(_urlTrackerSettings.GetForcedRedirectCacheTimeoutSeconds()) : null);
 				return records;
 			}
@@ -390,10 +390,10 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 		{
 			UrlTrackerGetResult redirects = _urlTrackerRepository.GetRedirects(null, null);
 			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.AppendLine("RootNodeId;Culture;Old URL;Regex;Redirect URL;Redirect node ID;Redirect HTTP Code;Forward query;Force redirect;Notes");
+			stringBuilder.AppendLine("RootNodeId;Culture;Old URL;Regex;Redirect URL;Redirect node ID;Redirect HTTP Code;Forward query;Force redirect;Priority;Notes");
 			foreach (UrlTrackerModel record in redirects.Records)
 			{
-				stringBuilder.AppendLine($"{record.RedirectRootNodeId};{record.Culture};{record.OldUrl};{record.OldRegex};{record.RedirectUrl};{record.RedirectNodeId};{record.RedirectHttpCode};{record.RedirectPassThroughQueryString};{record.ForceRedirect};{record.Notes}");
+				stringBuilder.AppendLine($"{record.RedirectRootNodeId};{record.Culture};{record.OldUrl};{record.OldRegex};{record.RedirectUrl};{record.RedirectNodeId};{record.RedirectHttpCode};{record.RedirectPassThroughQueryString};{record.ForceRedirect};{record.Priority};{record.Notes}");
 			}
 			return stringBuilder.ToString();
 		}

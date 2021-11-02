@@ -65,5 +65,9 @@ namespace InfoCaster.Umbraco.UrlTracker.Models
 		[Column("Inserted")]
 		[Constraint(Default = "getdate()")]
 		public DateTime Inserted { get; set; }
+
+		[Column("Priority")]
+		[Constraint(Default = "0")]
+		public int Priority { get; set; }
 	}
 }

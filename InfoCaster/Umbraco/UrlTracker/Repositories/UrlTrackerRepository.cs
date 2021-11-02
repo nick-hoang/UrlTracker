@@ -36,7 +36,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 			IScope val = _scopeProvider.CreateScope(IsolationLevel.Unspecified, (RepositoryCacheMode)0, (IEventDispatcher)null, (bool?)null, false, true);
 			try
 			{
-				string text = "INSERT INTO icUrlTracker (Culture, OldUrl, OldRegex, RedirectRootNodeId, RedirectNodeId, RedirectUrl, RedirectHttpCode, RedirectPassThroughQueryString, ForceRedirect, Notes, Is404, Referrer) VALUES (@culture, @oldUrl, @oldRegex, @redirectRootNodeId, @redirectNodeId, @redirectUrl, @redirectHttpCode, @redirectPassThroughQueryString, @forceRedirect, @notes, @is404, @referrer)";
+				string text = "INSERT INTO icUrlTracker (Culture, OldUrl, OldRegex, RedirectRootNodeId, RedirectNodeId, RedirectUrl, RedirectHttpCode, RedirectPassThroughQueryString, ForceRedirect, Notes, Is404, Referrer, Priority) VALUES (@culture, @oldUrl, @oldRegex, @redirectRootNodeId, @redirectNodeId, @redirectUrl, @redirectHttpCode, @redirectPassThroughQueryString, @forceRedirect, @notes, @is404, @referrer, @priority)";
 				var anon = new
 				{
 					culture = entry.Culture?.ToLower(),
@@ -50,7 +50,8 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 					forceRedirect = entry.ForceRedirect,
 					notes = entry.Notes,
 					is404 = entry.Is404,
-					referrer = entry.Referrer
+					referrer = entry.Referrer,
+					priority = entry.Priority,
 				};
 				return ((IDatabaseQuery)val.Database).Execute(text, new object[1] { anon }) == 1;
 			}
@@ -109,7 +110,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 			}
 		}
 
-		public UrlTrackerGetResult GetRedirects(int? skip, int? amount, UrlTrackerSortType sort = UrlTrackerSortType.CreatedDesc, string searchQuery = "", bool onlyForcedRedirects = false)
+		public UrlTrackerGetResult GetRedirects(int? skip, int? amount, UrlTrackerSortType sort = UrlTrackerSortType.Default, string searchQuery = "", bool onlyForcedRedirects = false)
 		{
 			IScope val = _scopeProvider.CreateScope(IsolationLevel.Unspecified, (RepositoryCacheMode)0, (IEventDispatcher)null, (bool?)null, false, true);
 			try
@@ -139,19 +140,28 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 				};
 				urlTrackerGetResult.TotalRecords = ((IDatabaseQuery)val.Database).ExecuteScalar<int>(stringBuilder.ToString(), new object[1] { anon });
 				switch (sort)
-				{
-				case UrlTrackerSortType.CreatedDesc:
+				{					
+					case UrlTrackerSortType.PriorityDesc:
+						stringBuilder.Append(" ORDER BY Priority DESC");
+						break;
+					case UrlTrackerSortType.PriorityAcs:
+						stringBuilder.Append(" ORDER BY Priority ASC");
+						break;
+					case UrlTrackerSortType.CreatedDesc:
 					stringBuilder.Append(" ORDER BY Inserted DESC");
 					break;
-				case UrlTrackerSortType.CreatedAsc:
-					stringBuilder.Append(" ORDER BY Inserted ASC");
-					break;
-				case UrlTrackerSortType.CultureDesc:
-					stringBuilder.Append(" ORDER BY Culture DESC");
-					break;
-				case UrlTrackerSortType.CultureAsc:
-					stringBuilder.Append(" ORDER BY Culture ASC");
-					break;
+					case UrlTrackerSortType.CreatedAsc:
+						stringBuilder.Append(" ORDER BY Inserted ASC");
+						break;
+					case UrlTrackerSortType.CultureDesc:
+						stringBuilder.Append(" ORDER BY Culture DESC");
+						break;
+					case UrlTrackerSortType.CultureAsc:
+						stringBuilder.Append(" ORDER BY Culture ASC");
+						break;
+					default:
+						stringBuilder.Append(" ORDER BY Priority,Inserted DESC,Culture ASC");
+						break;
 				}
 				stringBuilder.Replace("SELECT COUNT(*)", "SELECT *");
 				if (skip.HasValue)
@@ -307,7 +317,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 			IScope val = _scopeProvider.CreateScope(IsolationLevel.Unspecified, (RepositoryCacheMode)0, (IEventDispatcher)null, (bool?)null, false, true);
 			try
 			{
-				string text = "UPDATE icUrlTracker SET Culture = @culture, OldUrl = @oldUrl, OldRegex = @oldRegex, RedirectRootNodeId = @redirectRootNodeId, RedirectNodeId = @redirectNodeId, RedirectUrl = @redirectUrl, RedirectHttpCode = @redirectHttpCode, RedirectPassThroughQueryString = @redirectPassThroughQueryString, ForceRedirect = @forceRedirect, Notes = @notes, Is404 = @is404 WHERE Id = @id";
+				string text = "UPDATE icUrlTracker SET Culture = @culture, OldUrl = @oldUrl, OldRegex = @oldRegex, RedirectRootNodeId = @redirectRootNodeId, RedirectNodeId = @redirectNodeId, RedirectUrl = @redirectUrl, RedirectHttpCode = @redirectHttpCode, RedirectPassThroughQueryString = @redirectPassThroughQueryString, ForceRedirect = @forceRedirect, Notes = @notes, Is404 = @is404, Priority = @priority WHERE Id = @id";
 				var anon = new
 				{
 					culture = entry.Culture?.ToLower(),
@@ -321,7 +331,8 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 					forceRedirect = entry.ForceRedirect,
 					notes = entry.Notes,
 					is404 = entry.Is404,
-					id = entry.Id
+					id = entry.Id,
+					priority = entry.Priority,
 				};
 				((IDatabaseQuery)val.Database).Execute(text, new object[1] { anon });
 			}

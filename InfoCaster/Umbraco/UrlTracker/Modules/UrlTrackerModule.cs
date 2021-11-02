@@ -176,7 +176,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 				{
 					if (!ignoreHttpStatusCode)
 					{
-						string query = "SELECT * FROM icUrlTracker WHERE Is404 = 0 AND ForceRedirect = @forceRedirect AND (RedirectRootNodeId = @redirectRootNodeId OR RedirectRootNodeId = -1) AND OldRegex IS NOT NULL ORDER BY Inserted DESC";
+						string query = "SELECT * FROM icUrlTracker WHERE Is404 = 0 AND ForceRedirect = @forceRedirect AND (RedirectRootNodeId = @redirectRootNodeId OR RedirectRootNodeId = -1) AND OldRegex IS NOT NULL ORDER BY Priority,Inserted DESC";
 						UrlTrackerModel urlTrackerModel = _urlTrackerRepository.FirstOrDefault<UrlTrackerModel>(query, new
 						{
 							forceRedirect = (ignoreHttpStatusCode ? 1 : 0),

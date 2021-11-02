@@ -13,7 +13,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 
 		UrlTrackerModel GetEntryById(int id);
 
-		UrlTrackerGetResult GetRedirects(int? skip, int? amount, UrlTrackerSortType sort = UrlTrackerSortType.CreatedDesc, string searchQuery = "", bool onlyForcedRedirects = false);
+		UrlTrackerGetResult GetRedirects(int? skip, int? amount, UrlTrackerSortType sort = UrlTrackerSortType.Default, string searchQuery = "", bool onlyForcedRedirects = false);
 
 		UrlTrackerGetResult GetNotFounds(int? skip, int? amount, UrlTrackerSortType sort = UrlTrackerSortType.LastOccurredDesc, string searchQuery = "");
 

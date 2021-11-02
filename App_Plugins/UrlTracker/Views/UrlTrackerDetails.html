@@ -23,7 +23,7 @@
 						<!-- #endregion -->
 						<!-- #region Old url/regex -->
 						<umb-control-group label="Old Url" description="The URL path and query string, which you'd like to redirect">
-							<input type="text" value="{{vm.entry.OldUrl}}" ng-model="vm.entry.OldUrl" ng-disabled="!vm.advancedView"/>
+							<input type="text" value="{{vm.entry.OldUrl}}" ng-model="vm.entry.OldUrl" ng-disabled="!vm.advancedView" />
 						</umb-control-group>
 						<umb-control-group label="Regex" description="The input for Regex matching is the path AND query string, without leading slash." ng-if="vm.advancedView">
 							<input type="text" value="{{vm.entry.OldRegex}}" ng-model="vm.entry.OldRegex" />
@@ -65,6 +65,9 @@
 									<span class="umb-form-check__text ng-binding ng-scope">Temporary (302)</span>
 								</span>
 							</label>
+						</umb-control-group>
+						<umb-control-group label="Priority" description='The priority of this rule in case there multi rules matched the URL'>
+							<input type="text" value="{{vm.entry.Priority}}" ng-model="vm.entry.Priority" />
 						</umb-control-group>
 						<!--#endregion-->
 					</umb-box-content>
