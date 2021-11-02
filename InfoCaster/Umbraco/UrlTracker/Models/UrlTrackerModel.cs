@@ -142,7 +142,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Models
 			return null;
 		});
 
-		private Lazy<string> _oldUrlQuery => new Lazy<string>(() => OldUrl.Contains("?") ? OldUrl.Substring(OldUrl.IndexOf('?') + 1) : string.Empty);
+		private Lazy<string> _oldUrlQuery => new Lazy<string>(() => (OldUrl != null && OldUrl.Contains("?")) ? OldUrl.Substring(OldUrl.IndexOf('?') + 1) : string.Empty);
 
 		private Lazy<string> _calculatedRedirectUrl => new Lazy<string>(delegate
 		{

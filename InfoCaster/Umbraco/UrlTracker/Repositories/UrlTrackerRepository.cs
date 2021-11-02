@@ -144,7 +144,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 					case UrlTrackerSortType.PriorityDesc:
 						stringBuilder.Append(" ORDER BY Priority DESC");
 						break;
-					case UrlTrackerSortType.PriorityAcs:
+					case UrlTrackerSortType.PriorityAsc:
 						stringBuilder.Append(" ORDER BY Priority ASC");
 						break;
 					case UrlTrackerSortType.CreatedDesc:

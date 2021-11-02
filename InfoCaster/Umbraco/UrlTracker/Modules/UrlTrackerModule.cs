@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -62,13 +63,13 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 				lock (_urlTrackerSubscribeLock)
 				{
 					UmbracoModule.EndRequest += UmbracoModule_EndRequest;
-					_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Subscribed to EndRequest events");
+					//_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Subscribed to EndRequest events");
 					_urlTrackerSubscribed = true;
 				}
 			}
 			app.PostResolveRequestCache -= Context_PostResolveRequestCache;
 			app.PostResolveRequestCache += Context_PostResolveRequestCache;
-			_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Subscribed to AcquireRequestState events");
+			//_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Subscribed to AcquireRequestState events");
 		}
 
 		private void Context_PostResolveRequestCache(object sender, EventArgs e)
@@ -104,11 +105,21 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 			}
 			if (context == null)
 			{
-				_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No HttpContext has been passed by {0}", callingEventName);
+				//_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No HttpContext has been passed by {0}", callingEventName);
 				context = HttpContext.Current;
-			}
+			}			
 			HttpRequest request = context.Request;
 			HttpResponse response = context.Response;
+
+			var incomingUrl = _urlTrackerHelper.ResolveShortestUrl(request.RawUrl);
+			//doesn't proceed files and umbraco paths or home page
+			if (!string.IsNullOrEmpty(Path.GetExtension(request.RawUrl)) 
+				|| incomingUrl.ToLower().StartsWith("umbraco")
+				|| incomingUrl == "/"
+				|| incomingUrl.Contains("?ufprt="))
+            {
+				return;
+            }
 			if (!string.IsNullOrEmpty(request.QueryString[_urlTrackerSettings.GetHttpModuleCheck()]))
 			{
 				response.Clear();
@@ -118,8 +129,8 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 				context.ApplicationInstance.CompleteRequest();
 				return;
 			}
-			_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | {0} start", callingEventName);
-			_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Incoming URL is: {0}", _urlTrackerHelper.ResolveShortestUrl(request.RawUrl));
+			//_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | {0} start", callingEventName);
+			_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Incoming URL is: {0}", incomingUrl);
 			if (_urlTrackerInstalled && (response.StatusCode == 404 || ignoreHttpStatusCode))
 			{
 				if (response.StatusCode == 404)
@@ -132,11 +143,11 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 				}
 				string urlWithoutDomain = "";
 				UrlTrackerDomain domain = _urlTrackerService.GetUmbracoDomainFromUrl(request.Url.ToString(), ref urlWithoutDomain);
-				string shortestUrl = _urlTrackerHelper.ResolveShortestUrl(urlWithoutDomain);
+				string urlWithQueryString = _urlTrackerHelper.ResolveShortestUrl(urlWithoutDomain);
 				int rootNodeId = -1;
-				bool flag = shortestUrl.Contains('?');
-				string text = (flag ? shortestUrl.Substring(0, shortestUrl.IndexOf('?')) : shortestUrl);
-				if (_urlTrackerHelper.IsReservedPathOrUrl(shortestUrl))
+				bool flag = urlWithQueryString.Contains('?');
+				string urlWithoutQueryString = (flag ? urlWithQueryString.Substring(0, urlWithQueryString.IndexOf('?')) : urlWithQueryString);
+				if (_urlTrackerHelper.IsReservedPathOrUrl(urlWithQueryString))
 				{
 					_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | URL is an umbraco reserved path or url, ignore request");
 					return;
@@ -166,11 +177,11 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 				bool redirectPassThroughQueryString = true;
 				if (!ignoreHttpStatusCode)
 				{
-					LoadUrlTrackerMatchesFromDatabase(request, domain, shortestUrl, text, flag, rootNodeId, ref redirectUrl, ref redirectHttpCode, ref redirectPassThroughQueryString);
+					LoadUrlTrackerMatchesFromDatabase(request, domain, urlWithQueryString, urlWithoutQueryString, flag, rootNodeId, ref redirectUrl, ref redirectHttpCode, ref redirectPassThroughQueryString);
 				}
 				else
 				{
-					LoadUrlTrackerMatchesFromCache(request, domain, shortestUrl, text, flag, rootNodeId, ref redirectUrl, ref redirectHttpCode, ref redirectPassThroughQueryString);
+					LoadUrlTrackerMatchesFromCache(request, domain, urlWithQueryString, urlWithoutQueryString, flag, rootNodeId, ref redirectUrl, ref redirectHttpCode, ref redirectPassThroughQueryString);
 				}
 				if (!redirectHttpCode.HasValue)
 				{
@@ -185,9 +196,9 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 						if (urlTrackerModel != null)
 						{
 							Regex regex = new Regex(urlTrackerModel.OldRegex);
-							if (regex.IsMatch(shortestUrl))
+							if (regex.IsMatch(urlWithQueryString))
 							{
-								_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Regex match found");
+								_urlTrackerLoggingHelper.LogInformation($"UrlTracker HttpModule | Regex match found #{urlTrackerModel.Id}:{urlTrackerModel.OldRegex}");
 								if (urlTrackerModel.RedirectNodeId.HasValue)
 								{
 									int value = urlTrackerModel.RedirectNodeId.Value;
@@ -210,7 +221,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 									if (_capturingGroupsRegex.IsMatch(redirectUrl))
 									{
 										_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Found regex capturing groups in the redirect url");
-										redirectUrl = regex.Replace(shortestUrl, redirectUrl);
+										redirectUrl = regex.Replace(urlWithQueryString, redirectUrl);
 										_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Redirect url changed to: {0} (because of regex capturing groups)", redirectUrl);
 									}
 								}
@@ -237,10 +248,10 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 								UrlTrackerModel = x,
 								Regex = new Regex(x.OldRegex)
 							} into x
-							where x.Regex.IsMatch(shortestUrl)
+							where x.Regex.IsMatch(urlWithQueryString)
 							select x)
 						{
-							_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Regex match found");
+							_urlTrackerLoggingHelper.LogInformation($"UrlTracker HttpModule | Regex match found 243 #{item.UrlTrackerModel.Id}:{item.UrlTrackerModel.OldRegex}");
 							if (item.UrlTrackerModel.RedirectNodeId.HasValue)
 							{
 								_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Redirect node id: {0}", item.UrlTrackerModel.RedirectNodeId.Value);
@@ -262,7 +273,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 								if (_capturingGroupsRegex.IsMatch(redirectUrl))
 								{
 									_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Found regex capturing groups in the redirect url");
-									redirectUrl = item.Regex.Replace(shortestUrl, redirectUrl);
+									redirectUrl = item.Regex.Replace(urlWithQueryString, redirectUrl);
 									_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Redirect url changed to: {0} (because of regex capturing groups)", redirectUrl);
 								}
 							}
@@ -272,7 +283,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 							_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Redirect http code set to: {0}", redirectHttpCode);
 						}
 					}
-				}
+				} 
 				if (redirectHttpCode.HasValue)
 				{
 					string text2 = string.Empty;
@@ -319,14 +330,14 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 				}
 				else if (!ignoreHttpStatusCode)
 				{
-					bool flag2 = _urlTrackerService.IgnoreExist(shortestUrl, rootNodeId, domain?.LanguageIsoCode);
-					if (!flag2 && !_urlTrackerSettings.IsNotFoundTrackingDisabled() && !_urlTrackerHelper.IsReservedPathOrUrl(text) && request.Headers["X-UrlTracker-Ignore404"] != "1")
+					bool flag2 = _urlTrackerService.IgnoreExist(urlWithQueryString, rootNodeId, domain?.LanguageIsoCode);
+					if (!flag2 && !_urlTrackerSettings.IsNotFoundTrackingDisabled() && !_urlTrackerHelper.IsReservedPathOrUrl(urlWithoutQueryString) && request.Headers["X-UrlTracker-Ignore404"] != "1")
 					{
 						bool flag3 = false;
 						Regex[] regexNotFoundUrlsToIgnore = _urlTrackerSettings.GetRegexNotFoundUrlsToIgnore();
 						for (int i = 0; i < regexNotFoundUrlsToIgnore.Length; i++)
 						{
-							if (regexNotFoundUrlsToIgnore[i].IsMatch(text))
+							if (regexNotFoundUrlsToIgnore[i].IsMatch(urlWithoutQueryString))
 							{
 								flag3 = true;
 								break;
@@ -335,7 +346,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 						if (!flag3)
 						{
 							_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No match found, logging as 404 not found");
-							_urlTrackerService.AddNotFound(shortestUrl, rootNodeId, (request.UrlReferrer != null && !request.UrlReferrer.ToString().Contains(_urlTrackerSettings.GetReferrerToIgnore())) ? request.UrlReferrer.ToString() : "", domain?.LanguageIsoCode);
+							_urlTrackerService.AddNotFound(urlWithQueryString, rootNodeId, (request.UrlReferrer != null && !request.UrlReferrer.ToString().Contains(_urlTrackerSettings.GetReferrerToIgnore())) ? request.UrlReferrer.ToString() : "", domain?.LanguageIsoCode);
 						}
 					}
 					if (_urlTrackerSettings.IsNotFoundTrackingDisabled())
@@ -344,15 +355,15 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 					}
 					else if (flag2)
 					{
-						_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No match found, url is configured to be ignored: {0}", text);
+						_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No match found, url is configured to be ignored: {0}", urlWithoutQueryString);
 					}
-					else if (_urlTrackerHelper.IsReservedPathOrUrl(text))
+					else if (_urlTrackerHelper.IsReservedPathOrUrl(urlWithoutQueryString))
 					{
-						_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No match found, url is ignored because it's an umbraco reserved URL or path: {0}", text);
+						_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No match found, url is ignored because it's an umbraco reserved URL or path: {0}", urlWithoutQueryString);
 					}
 					else if (request.Headers["X-UrlTracker-Ignore404"] == "1")
 					{
-						_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No match found, url is ignored because the 'X-UrlTracker-Ignore404' header was set to '1'. URL: {0}", text);
+						_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | No match found, url is ignored because the 'X-UrlTracker-Ignore404' header was set to '1'. URL: {0}", urlWithoutQueryString);
 					}
 				}
 				else
@@ -367,20 +378,21 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 			_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | {0} end", callingEventName);
 		}
 
-		private void LoadUrlTrackerMatchesFromDatabase(HttpRequest request, UrlTrackerDomain domain, string shortestUrl, string urlWithoutQueryString, bool urlHasQueryString, int rootNodeId, ref string redirectUrl, ref int? redirectHttpCode, ref bool redirectPassThroughQueryString)
+		private void LoadUrlTrackerMatchesFromDatabase(HttpRequest request, UrlTrackerDomain domain, string urlWithQueryString, string urlWithoutQueryString, bool urlHasQueryString, int rootNodeId, ref string redirectUrl, ref int? redirectHttpCode, ref bool redirectPassThroughQueryString)
 		{
+			_urlTrackerLoggingHelper.LogInformation($"UrlTracker HttpModule | LoadUrlTrackerMatchesFromDatabase urlWithQueryString:{urlWithQueryString}, urlWithoutQueryString:{urlWithoutQueryString}");
 			UrlTrackerModel urlTrackerModel = _urlTrackerRepository.FirstOrDefault<UrlTrackerModel>("SELECT * FROM icUrlTracker WHERE Is404 = 0 AND ForceRedirect = 0 AND (Culture = @culture OR Culture IS NULL) AND (RedirectRootNodeId = @redirectRootNodeId OR RedirectRootNodeId IS NULL OR RedirectRootNodeId = -1) AND (OldUrl = @urlWithoutQueryString OR OldUrl = @urlWithQueryString) ORDER BY CASE WHEN RedirectHttpCode = 410 THEN 2 ELSE 1 END", new
 			{
 				redirectRootNodeId = rootNodeId,
 				urlWithoutQueryString = urlWithoutQueryString,
-				urlWithQueryString = shortestUrl,
+				urlWithQueryString = urlWithQueryString,
 				culture = (domain?.LanguageIsoCode?.ToLower() ?? "")
 			});
 			if (urlTrackerModel == null)
 			{
 				return;
 			}
-			_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | URL match found");
+			_urlTrackerLoggingHelper.LogInformation($"UrlTracker HttpModule | URL match found #{urlTrackerModel.Id}:{ urlTrackerModel.OldUrl}");
 			if (urlTrackerModel.RedirectNodeId.HasValue && urlTrackerModel.RedirectHttpCode != 410)
 			{
 				UrlTrackerNodeModel redirectRootNode = urlTrackerModel.RedirectRootNode;
@@ -424,19 +436,20 @@ namespace InfoCaster.Umbraco.UrlTracker.Modules
 			_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Redirect http code set to: {0}", redirectHttpCode);
 		}
 
-		private void LoadUrlTrackerMatchesFromCache(HttpRequest request, UrlTrackerDomain domain, string shortestUrl, string urlWithoutQueryString, bool urlHasQueryString, int rootNodeId, ref string redirectUrl, ref int? redirectHttpCode, ref bool redirectPassThroughQueryString)
+		private void LoadUrlTrackerMatchesFromCache(HttpRequest request, UrlTrackerDomain domain, string urlWithQueryString, string urlWithoutQueryString, bool urlHasQueryString, int rootNodeId, ref string redirectUrl, ref int? redirectHttpCode, ref bool redirectPassThroughQueryString)
 		{
+			_urlTrackerLoggingHelper.LogInformation($"UrlTracker HttpModule | LoadUrlTrackerMatchesFromCache urlWithQueryString:{urlWithQueryString}, urlWithoutQueryString:{urlWithoutQueryString}");
 			List<UrlTrackerModel> forcedRedirects = _urlTrackerService.GetForcedRedirects();
 			if (forcedRedirects == null || !forcedRedirects.Any())
 			{
 				return;
 			}
 			foreach (UrlTrackerModel item in (from x in forcedRedirects
-				where (x.Culture == (domain?.LanguageIsoCode?.ToLower() ?? "") || x.Culture == null) && (x.RedirectRootNodeId == rootNodeId || x.RedirectRootNodeId == -1) && (string.Equals(x.OldUrl ?? "", urlWithoutQueryString ?? "", StringComparison.CurrentCultureIgnoreCase) || string.Equals(x.OldUrl ?? "", shortestUrl ?? "", StringComparison.CurrentCultureIgnoreCase))
+				where (x.Culture == (domain?.LanguageIsoCode?.ToLower() ?? "") || x.Culture == null) && (x.RedirectRootNodeId == rootNodeId || x.RedirectRootNodeId == -1) && (string.Equals(x.OldUrl ?? "", urlWithoutQueryString ?? "", StringComparison.CurrentCultureIgnoreCase) || string.Equals(x.OldUrl ?? "", urlWithQueryString ?? "", StringComparison.CurrentCultureIgnoreCase))
 				orderby (x.RedirectHttpCode != 410) ? 1 : 2, x.OldUrlQuery descending
 				select x).ToList())
 			{
-				_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | URL match found");
+				_urlTrackerLoggingHelper.LogInformation($"UrlTracker HttpModule | URL match found 439 #{item.Id}:{item.OldUrl}");
 				if (item.RedirectNodeId.HasValue && item.RedirectHttpCode != 410)
 				{
 					_urlTrackerLoggingHelper.LogInformation("UrlTracker HttpModule | Redirect node id: {0}", item.RedirectNodeId.Value);

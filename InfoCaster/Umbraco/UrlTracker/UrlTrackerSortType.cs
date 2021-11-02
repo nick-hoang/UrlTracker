@@ -3,7 +3,7 @@ namespace InfoCaster.Umbraco.UrlTracker
 	public enum UrlTrackerSortType
 	{
 		Default,//PriorityAsc | Created Desc
-		PriorityAcs,
+		PriorityAsc,
 		PriorityDesc,
 		CreatedDesc,
 		CreatedAsc,
