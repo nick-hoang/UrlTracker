@@ -197,7 +197,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 			}
 			StreamReader streamReader = new StreamReader(file.InputStream);
 			List<UrlTrackerModel> list = new List<UrlTrackerModel>();
-			string text = "RootNodeId;Culture;Old URL;Regex;Redirect URL;Redirect node ID;Redirect HTTP Code;Forward query;Force redirect;Notes";
+			string text = "RootNodeId;Culture;Old URL;Regex;Redirect URL;Redirect node ID;Redirect HTTP Code;Forward query;Force redirect;Priority;Notes";
 			int num = 1;
 			while (!streamReader.EndOfStream)
 			{
@@ -210,9 +210,9 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 						num++;
 						continue;
 					}
-					throw new Exception("Columns are incorrect");
+					throw new Exception($"Columns {num} are incorrect");
 				}
-				if (array.Count() != 10)
+				if (array.Count() != 11)
 				{
 					throw new Exception($"Values on line: {num} are incomplete");
 				}
@@ -223,7 +223,8 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 				string oldUrl = array[2];
 				string oldRegex = array[3];
 				string redirectUrl = array[4];
-				string notes = array[9];
+				int priority = 0;
+				string notes = array[10];
 				if (!int.TryParse(array[0], out var result4))
 				{
 					throw new Exception($"'RootNodeId' on line: {num} is not an integer");
@@ -244,6 +245,10 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 				{
 					throw new Exception($"'Force redirect' on line: {num} is invalid");
 				}
+				if (!string.IsNullOrWhiteSpace(array[9]) && !int.TryParse(array[9], out priority))
+				{
+					throw new Exception($"'Priority' on line: {num} is invalid");
+				}
 				UrlTrackerModel urlTrackerModel = new UrlTrackerModel
 				{
 					RedirectRootNodeId = result4,
@@ -255,6 +260,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 					RedirectHttpCode = result5,
 					RedirectPassThroughQueryString = result2,
 					ForceRedirect = result3,
+					Priority = priority,
 					Notes = notes
 				};
 				if (!ValidateRedirect(urlTrackerModel))
@@ -386,6 +392,10 @@ namespace InfoCaster.Umbraco.UrlTracker.Services
 			return _urlTrackerRepository.IgnoreExist(url, RootNodeId, culture);
 		}
 
+		/// <summary>
+		/// Export CSV
+		/// </summary>
+		/// <returns></returns>
 		public string GetRedirectsCsv()
 		{
 			UrlTrackerGetResult redirects = _urlTrackerRepository.GetRedirects(null, null);
