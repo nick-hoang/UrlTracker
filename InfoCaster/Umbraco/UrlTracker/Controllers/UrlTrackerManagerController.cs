@@ -85,7 +85,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Controllers
 		}
 
 		[HttpGet]
-		public IHttpActionResult GetRedirects(int skip, int amount, string query = "", UrlTrackerSortType sortType = UrlTrackerSortType.CreatedDesc)
+		public IHttpActionResult GetRedirects(int skip, int amount, string query = "", UrlTrackerSortType sortType = UrlTrackerSortType.Default)
 		{
 			UrlTrackerGetResult redirects = _urlTrackerService.GetRedirects(skip, amount, sortType, query);
 			UrlTrackerOverviewModel urlTrackerOverviewModel = new UrlTrackerOverviewModel

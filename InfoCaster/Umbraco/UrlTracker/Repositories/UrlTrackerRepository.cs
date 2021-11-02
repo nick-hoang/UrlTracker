@@ -160,7 +160,7 @@ namespace InfoCaster.Umbraco.UrlTracker.Repositories
 						stringBuilder.Append(" ORDER BY Culture ASC");
 						break;
 					default:
-						stringBuilder.Append(" ORDER BY Priority,Inserted DESC,Culture ASC");
+						stringBuilder.Append(" ORDER BY Inserted DESC,Culture ASC,Priority");
 						break;
 				}
 				stringBuilder.Replace("SELECT COUNT(*)", "SELECT *");
